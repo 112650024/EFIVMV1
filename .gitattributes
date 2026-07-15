@@ -1,0 +1,18 @@
+# 換行規則：不要依賴各台機器的 core.autocrlf 設定
+#
+# 這個 repo 的東西是要在 Linux 上跑的。.sh 只要變成 CRLF，
+# 執行時就會噴 "/usr/bin/env^M: bad interpreter"。
+# 明確鎖成 LF，不管 clone 的人本機怎麼設定都一樣。
+* text=auto eol=lf
+
+# 這幾種絕對不能是 CRLF
+*.sh   text eol=lf
+*.dsc  text eol=lf
+*.inf  text eol=lf
+
+# UsbOcRecover.c 開頭有 UTF-8 BOM，是刻意的（MSVC 沒 BOM 會用系統 codepage
+# 讀中文註解而爆掉）。text 屬性只動換行、不會動 BOM，所以安全。
+*.c    text eol=lf
+
+# 二進位，不要做任何轉換
+*.efi  binary

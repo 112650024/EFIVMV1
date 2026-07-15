@@ -1,0 +1,43 @@
+## @file
+#  UsbOcRecover.inf - xHCI Over-Current detection & recovery  v2.0
+#                     (UEFI Shell Application, X64)
+#
+#  Copyright (c) 2025-2026, UsbOcRecover Contributors. All rights reserved.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010006
+  BASE_NAME                      = UsbOcRecover
+  FILE_GUID                      = 8F1D2A34-7C56-49B1-9E2A-3C7D5F0A1B2C
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 2.0
+  ENTRY_POINT                    = UsbOcRecoverMain
+
+#
+#  VALID_ARCHITECTURES           = X64
+#
+
+[Sources]
+  UsbOcRecover.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+
+[LibraryClasses]
+  UefiApplicationEntryPoint
+  UefiLib
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  BaseLib
+  BaseMemoryLib
+  MemoryAllocationLib
+  PrintLib
+  DebugLib
+  DevicePathLib
+
+[Protocols]
+  gEfiPciIoProtocolGuid                 ## CONSUMES
+  gEfiSimpleFileSystemProtocolGuid      ## CONSUMES
+  gEfiLoadedImageProtocolGuid           ## CONSUMES
+  gEfiDevicePathProtocolGuid            ## CONSUMES

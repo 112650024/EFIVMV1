@@ -1,0 +1,22 @@
+# build-efi.sh 編完會把成品複製回這裡，不要 commit 進 repo
+UsbOcRecover.efi
+UsbOcRecover_RELEASE.efi
+*.efi
+
+# edk2 的建置產物（正常會在 ~/ocbuild-work，但保險起見）
+Build/
+Conf/
+*.o
+*.obj
+*.lib
+*.dll
+*.map
+*.pdb
+
+# 編輯器 / 系統
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
