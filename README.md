@@ -21,6 +21,10 @@ chmod +x *.sh
 
 跑完就會有 `UsbOcRecover.efi`。之後要重編，任何目錄打 `ocbuild` 就好。
 
+> **想寫自己的 EFI？看 [HOWTO.md](HOWTO.md)** —— 從「setup 跑完了，然後呢」
+> 開始，一步一步講到編出你自己的 `.efi`。各種情況（從零寫 / 已經有 .c /
+> 手上只有 .efi）都有涵蓋。
+
 ---
 
 ## 環境需求
@@ -56,6 +60,7 @@ EFIVMV1/
 ├── build-efi.sh              編譯（裝好後打 ocbuild 即可）
 ├── verify-efi.sh             驗證 .efi 真的是這份原始碼編的
 ├── new-efi-project.sh        產生一個你自己的空白 EFI 專案
+├── HOWTO.md                  ★ 怎麼寫自己的 EFI（詳細教學）
 └── UsbOcRecoverPkg/          edk2 專案
     ├── UsbOcRecoverPkg.dsc
     └── UsbOcRecover/
