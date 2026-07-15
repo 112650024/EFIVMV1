@@ -55,6 +55,7 @@ EFIVMV1/
 ├── setup-edk2-ubuntu.sh      環境一鍵安裝（跑一次）
 ├── build-efi.sh              編譯（裝好後打 ocbuild 即可）
 ├── verify-efi.sh             驗證 .efi 真的是這份原始碼編的
+├── new-efi-project.sh        產生一個你自己的空白 EFI 專案
 └── UsbOcRecoverPkg/          edk2 專案
     ├── UsbOcRecoverPkg.dsc
     └── UsbOcRecover/
@@ -110,6 +111,35 @@ ocbuild --clean         # 清乾淨重編
 ```
 
 同時也會複製一份回這個 repo 的根目錄。
+
+---
+
+## 想寫自己的 EFI？
+
+```bash
+./new-efi-project.sh MyApp      # 在 ~/MyApp 產生一個空白專案
+cd ~/MyApp
+./build.sh                      # 編譯
+```
+
+它會產生三個檔案，這就是一個 EFI 專案的最小組成：
+
+| 檔案 | 是什麼 | 什麼時候要改 |
+|---|---|---|
+| `MyAppPkg/MyApp/MyApp.c` | **你的程式碼** | 一直改 |
+| `MyAppPkg/MyApp/MyApp.inf` | 描述「這一個模組」 | 多加 .c 檔、要用新的 Protocol 時 |
+| `MyAppPkg/MyAppPkg.dsc` | 描述「整包怎麼組起來」 | 要用新的函式庫時 |
+
+改完 `.c` 再跑一次 `./build.sh` 就好。GUID 是自動產生的，每個專案都不一樣。
+
+產生出來的範本會印出 UEFI 版本和韌體廠商，然後等你按鍵 —— 可以直接拿來
+確認整條路是通的，再開始改成你要的東西。
+
+**兩個規則**（範本已經幫你守好了，自己改的時候要記得）：
+
+- `.inf` / `.dsc` **一律純 ASCII**，不要寫中文 → 否則 `error 0004: File read failure`
+- `.c` 要寫中文註解的話，存檔選 **UTF-8 with BOM** → 否則用 MSVC 編會噴
+  `error C2001: newline in constant`，而且指在一行完全正常的程式碼上
 
 ---
 
