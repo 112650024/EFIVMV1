@@ -142,12 +142,19 @@ while IFS= read -r line; do
 done < <(git submodule status 2>/dev/null)
 
 echo
+#
+# ★ 「有幾個沒抓到」本身不是問題，不要拿它當判斷標準 ★
+#
+# edk2 十幾個 submodule 裡，編 UefiApplication 只需要 brotli 一個。
+# 拿「全部抓到了沒」當標準會誤報 —— 你明明可以編，它卻說你有問題。
+# 真正的判斷標準只有下面那個 brotli 檢查。
+#
 if [ "$TOTAL" -eq 0 ]; then
     warn "讀不到 submodule 清單（.gitmodules 可能不見了）"
     PROBLEMS=$((PROBLEMS+1))
 elif [ "$MISSING" -gt 0 ]; then
-    fail "$TOTAL 個 submodule 裡有 $MISSING 個沒抓到"
-    PROBLEMS=$((PROBLEMS+1))
+    echo "  ${YLW}[資訊]${RST} $TOTAL 個 submodule 裡有 $MISSING 個沒抓到"
+    echo "         先別緊張 —— 重點是 brotli 在不在，看下一項。"
 else
     ok "$TOTAL 個 submodule 都在"
 fi
@@ -300,7 +307,15 @@ done < <(git submodule status 2>/dev/null)
 if [ "$STILL_MISSING" -gt 0 ]; then
     warn "還有 $STILL_MISSING 個 submodule 沒抓到"
     echo "         如果 brotli 在（上面是 OK），${BLD}這不會擋住你編 UefiApplication${RST}。"
-    echo "         那些是 CryptoPkg / RedfishPkg 之類你用不到的東西。"
+    echo
+    echo "         沒抓到的通常是這些，它們屬於你用不到的 package："
+    echo "           openssl    -> CryptoPkg"
+    echo "           libspdm    -> SecurityPkg（它自己底下還有一層 submodule，"
+    echo "                         所以 --recursive 最常炸在這個）"
+    echo "           googletest -> UnitTestFrameworkPkg"
+    echo "           jansson    -> RedfishPkg"
+    echo
+    echo "         你編的是 UefiApplication，只用 MdePkg。${BLD}可以直接往下跑 setup。${RST}"
 else
     ok "所有 submodule 都在"
 fi

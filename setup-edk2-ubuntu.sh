@@ -253,19 +253,41 @@ step "4/7  取得 submodule"
 # 上游一推新東西就開始失敗 —— 所以會出現「同一份腳本 A 電腦好好的、B 電腦爆」。
 # 完整抓多花幾分鐘、多約 200 MB，但不會看運氣。實際踩過才改成這樣。
 #
-if ! git submodule update --init --recursive; then
-    warn "submodule 抓取失敗，先對齊 URL 再重試一次..."
-    # .gitmodules 的網址如果變過，舊的 .git/config 會留著舊網址，症狀跟抓不到一樣
+# ★★ 而且不要無條件 --recursive ★★
+#
+# edk2 有十幾個 submodule，但編 UefiApplication（只用 MdePkg）真正需要的
+# 只有 BaseTools 的 brotli 一個。其餘都是別的 package 在用的：
+#     openssl    -> CryptoPkg
+#     libspdm    -> SecurityPkg    <- 它自己底下還有一層 submodule
+#     googletest -> UnitTestFrameworkPkg
+#     jansson    -> RedfishPkg
+#
+# --recursive 會遞迴進 libspdm 去抓「它的」submodule，那層失敗就整個 die：
+#     fatal: Failed to recurse into submodule path 'SecurityPkg/.../libspdm'
+# 於是一個你根本用不到的 package，擋住了整個安裝。實際踩過。
+#
+# 所以拆成兩段：brotli 是必要的（失敗就 die），其餘是加分的（失敗只警告）。
+
+# --- 必要：BaseTools 需要 brotli，沒有它 BaseTools 編不過 ---
+if ! git submodule update --init BaseTools/Source/C/BrotliCompress/brotli; then
+    # URL 變過的話 .git/config 會留著舊的，症狀跟抓不到一樣，sync 一下再試
+    warn "brotli 抓取失敗，對齊 URL 後重試..."
     git submodule sync --recursive >/dev/null 2>&1 || true
-    git submodule update --init --recursive || die "submodule 抓取失敗。
-
-       跑這支做詳細診斷與修復（它會逐項告訴你哪裡壞了）：
-           $SCRIPT_DIR/fix-submodule.sh
-
-       只想快點編起來的話（跳過你用不到的 openssl）：
-           $SCRIPT_DIR/fix-submodule.sh --minimal"
+    git submodule update --init BaseTools/Source/C/BrotliCompress/brotli || die "brotli 抓取失敗。
+       這個是必要的（BaseTools 需要）。跑這支診斷：
+           $SCRIPT_DIR/fix-submodule.sh --diag"
 fi
-ok "submodule 完成"
+ok "brotli 已取得（BaseTools 需要的唯一一個）"
+
+# --- 選用：其餘 submodule，抓不到也不該擋住你 ---
+echo "  嘗試抓取其餘 submodule（用不到，但抓了無妨）..."
+if git submodule update --init --recursive >/dev/null 2>&1; then
+    ok "其餘 submodule 也都抓好了"
+else
+    warn "部分 submodule 沒抓到（常見：libspdm / openssl）"
+    warn "編 UefiApplication 用不到它們，${BLD}繼續往下${RST}。"
+    warn "真的需要的話（例如要編 CryptoPkg）再跑：$SCRIPT_DIR/fix-submodule.sh"
+fi
 
 # ------------------------------------------------------------------
 step "5/7  編譯 BaseTools"
