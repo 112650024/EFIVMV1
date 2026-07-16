@@ -60,6 +60,7 @@ EFIVMV1/
 ├── build-efi.sh              編譯（裝好後打 ocbuild 即可）
 ├── verify-efi.sh             驗證 .efi 真的是這份原始碼編的
 ├── new-efi-project.sh        產生一個你自己的空白 EFI 專案
+├── fix-submodule.sh          submodule 抓取失敗時的診斷與修復
 ├── HOWTO.md                  ★ 怎麼寫自己的 EFI（詳細教學）
 └── UsbOcRecoverPkg/          edk2 專案
     ├── UsbOcRecoverPkg.dsc
@@ -192,12 +193,37 @@ source ./edksetup.sh   # ✅
 
 而且**每開一個新終端機都要重來一次**。這正是 `ocbuild` 存在的理由。
 
-### BaseTools 編到一半找不到標頭檔
-
-submodule 沒抓：
+### submodule 抓取失敗 / BaseTools 找不到標頭檔
 
 ```bash
-git -C ~/edk2 submodule update --init --recursive
+./fix-submodule.sh            # 診斷 + 修復
+./fix-submodule.sh --diag     # 只診斷，不動你的東西
+./fix-submodule.sh --minimal  # 只抓 BaseTools 真正需要的（快很多）
+```
+
+**為什麼會失敗，而且只有某些電腦會：**
+
+早期版本用了 `git submodule update --init --recursive --depth 1`。
+`--depth 1` 只抓每個 submodule「預設分支的最新一筆」，但 edk2 是把 submodule
+**釘在特定 commit** 上的，那一筆通常不是最新的。抓不到就噴：
+
+```
+error: Server does not allow request for unadvertised object <sha>
+fatal: reference is not a tree: <sha>
+```
+
+陰險的是它**機率性**：被釘的 commit 剛好還是分支頂端時就會成功，
+上游一推新東西就開始失敗 —— 所以會出現「同一份腳本 A 電腦好好的、B 電腦爆」。
+現在 `setup-edk2-ubuntu.sh` 已經拿掉 `--depth 1`，不會再看運氣。
+
+> **順帶一提：openssl 沒抓到不是問題。** 它是 CryptoPkg 用的，
+> 編 UefiApplication（只用 MdePkg）根本用不到，而它是最大、最常抓失敗的那個。
+> BaseTools 真正需要的只有 `BrotliCompress/brotli` 一個。這也是 `--minimal` 的用途。
+
+手動修的話：
+
+```bash
+git -C ~/edk2 submodule update --init --recursive   # 注意：不要加 --depth 1
 ```
 
 ### ★ build 說成功，但 .efi 是舊版（最陰險）

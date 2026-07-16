@@ -76,11 +76,23 @@ if [ "$CHECK_ONLY" -eq 1 ]; then
         else
             fail "MdePkg 不見了，clone 可能不完整"; problems=$((problems+1))
         fi
-        if [ -n "$(ls -A "$EDK2_DIR/CryptoPkg/Library/OpensslLib/openssl" 2>/dev/null)" ]; then
-            ok "submodule 已取得"
+        #
+        # 只檢查 brotli，不要檢查 openssl。
+        #
+        # BaseTools 的 C 工具裡只有 BrotliCompress 需要 submodule；
+        # openssl 是 CryptoPkg 用的，編 UefiApplication（只用 MdePkg）根本用不到，
+        # 而它是最大、最常抓失敗的那個。拿 openssl 當判斷標準會誤報
+        # 「submodule 沒抓」，但其實你該編的都編得起來。
+        #
+        if [ -n "$(ls -A "$EDK2_DIR/BaseTools/Source/C/BrotliCompress/brotli" 2>/dev/null)" ]; then
+            ok "submodule 已取得（brotli 在，BaseTools 可以編）"
         else
-            fail "submodule 沒抓 -> 跑：git -C $EDK2_DIR submodule update --init --recursive"
+            fail "brotli 沒抓到，BaseTools 會編不過"
+            echo "         修：$SCRIPT_DIR/fix-submodule.sh"
             problems=$((problems+1))
+        fi
+        if [ -z "$(ls -A "$EDK2_DIR/CryptoPkg/Library/OpensslLib/openssl" 2>/dev/null)" ]; then
+            echo "         （openssl 沒抓，但編 UefiApplication 用不到它，不算問題）"
         fi
     else
         fail "$EDK2_DIR 不存在"; problems=$((problems+1))
@@ -229,7 +241,30 @@ ok "edk2 版本：$(git describe --tags 2>/dev/null || git rev-parse --short HEA
 step "4/7  取得 submodule"
 # ------------------------------------------------------------------
 # ★ 漏了這步，BaseTools 會噴一堆找不到標頭檔 ★
-git submodule update --init --recursive --depth 1 || die "submodule 抓取失敗。"
+#
+# ★★ 這裡不要加 --depth 1 ★★
+#
+# --depth 1 只抓每個 submodule「預設分支的最新一筆」。但 edk2 是把 submodule
+# 釘在特定 commit 上的，那一筆通常不是最新的。抓不到就會噴：
+#     error: Server does not allow request for unadvertised object <sha>
+#     fatal: reference is not a tree: <sha>
+#
+# 陰險的地方：它是「機率性」的。被釘的 commit 剛好還是分支頂端時就會成功，
+# 上游一推新東西就開始失敗 —— 所以會出現「同一份腳本 A 電腦好好的、B 電腦爆」。
+# 完整抓多花幾分鐘、多約 200 MB，但不會看運氣。實際踩過才改成這樣。
+#
+if ! git submodule update --init --recursive; then
+    warn "submodule 抓取失敗，先對齊 URL 再重試一次..."
+    # .gitmodules 的網址如果變過，舊的 .git/config 會留著舊網址，症狀跟抓不到一樣
+    git submodule sync --recursive >/dev/null 2>&1 || true
+    git submodule update --init --recursive || die "submodule 抓取失敗。
+
+       跑這支做詳細診斷與修復（它會逐項告訴你哪裡壞了）：
+           $SCRIPT_DIR/fix-submodule.sh
+
+       只想快點編起來的話（跳過你用不到的 openssl）：
+           $SCRIPT_DIR/fix-submodule.sh --minimal"
+fi
 ok "submodule 完成"
 
 # ------------------------------------------------------------------
